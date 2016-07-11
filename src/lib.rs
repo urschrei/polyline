@@ -13,12 +13,12 @@ fn scale(n: f64, factor: i32) -> i64 {
 }
 
 // Bounds checking for input values
-fn check<T>(to_check: T, bounds: (T, T)) -> Result<T, T>
+fn check<T>(to_check: &T, bounds: (T, T)) -> Result<T, T>
     where T: cmp::PartialOrd + Copy
 {
     match to_check {
-        to_check if bounds.0 <= to_check && to_check <= bounds.1 => Ok(to_check),
-        _ => Err(to_check),
+        to_check if bounds.0 <= *to_check && *to_check <= bounds.1 => Ok(*to_check),
+        _ => Err(*to_check),
     }
 }
 
@@ -30,12 +30,12 @@ fn encode(current: f64, previous: f64, factor: i32) -> Result<String, String> {
     let mut output: String = "".to_string();
     while coordinate >= 0x20 {
         let from_char = try!(char::from_u32(((0x20 | (coordinate & 0x1f)) + 63) as u32)
-            .ok_or("Couldn't convert character"));
+                                 .ok_or("Couldn't convert character"));
         output.push(from_char);
         coordinate >>= 5;
     }
     let from_char = try!(char::from_u32((coordinate + 63) as u32)
-        .ok_or("Couldn't convert character"));
+                             .ok_or("Couldn't convert character"));
     output.push(from_char);
     Ok(output)
 }
@@ -54,12 +54,21 @@ pub fn encode_coordinates(coordinates: &Vec<[f64; 2]>, precision: u32) -> Result
     if coordinates.is_empty() {
         return Ok("".to_string());
     }
-    coordinates.par_iter().for_each(|pair| {
-        try!(check(pair[0], (MIN_LATITUDE, MAX_LATITUDE))
-            .map_err(|e| format!("Latitude error: {0}", e).to_string()));
-        try!(check(pair[1], (MIN_LONGITUDE, MAX_LONGITUDE))
-            .map_err(|e| format!("Longitude error: {0}", e).to_string()));
-    });
+    let res: Result<Vec<[f64; 2]>, String> = 
+        coordinates
+         .iter()
+         .map(|pair| {
+             match (check(&pair[0],
+                          (MIN_LATITUDE, MAX_LATITUDE)).map_err(|e| format!("Lat error: {0}", e).to_string()),
+                    check(&pair[1],
+                          (MIN_LONGITUDE, MAX_LONGITUDE)).map_err(|e| format!("Lon error: {0}", e).to_string())) {
+                 (Ok(v1), Ok(v2)) => Ok([v1, v2]),
+                 (Err(v), _) => Err(v),
+                 (_, Err(v)) => Err(v),
+             }
+         })
+         .collect();
+    let _ = try!(res);
     let base: i32 = 10;
     let factor: i32 = base.pow(precision);
     let mut output = try!(encode(coordinates[0][0], 0.0, factor)) +
@@ -181,7 +190,7 @@ mod tests {
     }
 
     #[test]
-    // #[should_panic]
+    #[should_panic]
     // Can't have a latitude > 90.0
     fn bad_coords() {
         let s = "_p~iF~ps|U_ulLnnqC_mqNvxq`@";
