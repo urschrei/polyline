@@ -1,3 +1,5 @@
+extern crate rayon;
+use rayon::prelude::*;
 use std::{char, cmp};
 
 const MIN_LONGITUDE: f64 = -180.;
@@ -52,15 +54,14 @@ pub fn encode_coordinates(coordinates: &Vec<[f64; 2]>, precision: u32) -> Result
     if coordinates.is_empty() {
         return Ok("".to_string());
     }
-    for (i, pair) in coordinates.iter().enumerate() {
+    coordinates.par_iter().for_each(|pair| {
         try!(check(pair[0], (MIN_LATITUDE, MAX_LATITUDE))
-            .map_err(|e| format!("Latitude error at position {0}: {1}", i, e).to_string()));
+            .map_err(|e| format!("Latitude error: {0}", e).to_string()));
         try!(check(pair[1], (MIN_LONGITUDE, MAX_LONGITUDE))
-            .map_err(|e| format!("Longitude error at position {0}: {1}", i, e).to_string()));
-    }
+            .map_err(|e| format!("Longitude error: {0}", e).to_string()));
+    });
     let base: i32 = 10;
     let factor: i32 = base.pow(precision);
-
     let mut output = try!(encode(coordinates[0][0], 0.0, factor)) +
                      &try!(encode(coordinates[0][1], 0.0, factor));
 
@@ -180,7 +181,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    // #[should_panic]
     // Can't have a latitude > 90.0
     fn bad_coords() {
         let s = "_p~iF~ps|U_ulLnnqC_mqNvxq`@";

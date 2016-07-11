@@ -10,3 +10,4 @@ license = "ISC"
 
 [dependencies]
 rand = "*"
+rayon = "0.4.0"
