@@ -11,3 +11,5 @@ license = "ISC"
 [dependencies]
 rand = "*"
 rayon = "0.4.0"
+crossbeam = "0.2.9"
+num_cpus = "0.2.13"
