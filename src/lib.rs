@@ -1,8 +1,5 @@
 extern crate rayon;
 use rayon::prelude::*;
-extern crate crossbeam;
-use crossbeam::scope;
-extern crate num_cpus;
 use std::{char, cmp};
 
 const MIN_LONGITUDE: f64 = -180.;
